@@ -1,0 +1,113 @@
+diff --git a/flex_gemm/kernels/cuda/hash/hash.cu b/flex_gemm/kernels/cuda/hash/hash.cu
+index ba807b0..2ac307e 100644
+--- a/flex_gemm/kernels/cuda/hash/hash.cu
++++ b/flex_gemm/kernels/cuda/hash/hash.cu
+@@ -41,10 +41,10 @@ static void dispatch_hashmap_insert(
+     >>>(
+         hashmap_keys.size(0),
+         keys.size(0),
+-        hashmap_keys.data_ptr<K>(),
+-        hashmap_values.data_ptr<V>(),
+-        keys.data_ptr<K>(),
+-        values.data_ptr<V>()
++        hashmap_keys.template data_ptr<K>(),
++        hashmap_values.template data_ptr<V>(),
++        keys.template data_ptr<K>(),
++        values.template data_ptr<V>()
+     );
+ }
+ 
+@@ -120,10 +120,10 @@ static void dispatch_hashmap_lookup(
+     >>>(
+         hashmap_keys.size(0),
+         keys.size(0),
+-        hashmap_keys.data_ptr<K>(),
+-        hashmap_values.data_ptr<V>(),
+-        keys.data_ptr<K>(),
+-        values.data_ptr<V>()
++        hashmap_keys.template data_ptr<K>(),
++        hashmap_values.template data_ptr<V>(),
++        keys.template data_ptr<K>(),
++        values.template data_ptr<V>()
+     );
+ }
+ 
+@@ -215,10 +215,10 @@ static void dispatch_hashmap_insert_3d(
+         hashmap_keys.size(0),
+         coords.size(0),
+         W, H, D,
+-        hashmap_keys.data_ptr<K>(),
+-        hashmap_values.data_ptr<V>(),
++        hashmap_keys.template data_ptr<K>(),
++        hashmap_values.template data_ptr<V>(),
+         coords.data_ptr<int32_t>(),
+-        values.data_ptr<V>()
++        values.template data_ptr<V>()
+     );
+ }
+ 
+@@ -313,10 +313,10 @@ static void dispatch_hashmap_lookup_3d(
+         hashmap_keys.size(0),
+         coords.size(0),
+         W, H, D,
+-        hashmap_keys.data_ptr<K>(),
+-        hashmap_values.data_ptr<V>(),
++        hashmap_keys.template data_ptr<K>(),
++        hashmap_values.template data_ptr<V>(),
+         coords.data_ptr<int32_t>(),
+-        values.data_ptr<V>()
++        values.template data_ptr<V>()
+     );
+ }
+ 
+@@ -405,8 +405,8 @@ static void dispatch_hashmap_insert_3d_idx_as_val(
+         hashmap_keys.size(0),
+         coords.size(0),
+         W, H, D,
+-        hashmap_keys.data_ptr<K>(),
+-        hashmap_values.data_ptr<V>(),
++        hashmap_keys.template data_ptr<K>(),
++        hashmap_values.template data_ptr<V>(),
+         coords.data_ptr<int32_t>()
+     );
+ }
+diff --git a/flex_gemm/kernels/cuda/spconv/sparse_neighbor_map.cu b/flex_gemm/kernels/cuda/spconv/sparse_neighbor_map.cu
+index d1346bb..2278c40 100644
+--- a/flex_gemm/kernels/cuda/spconv/sparse_neighbor_map.cu
++++ b/flex_gemm/kernels/cuda/spconv/sparse_neighbor_map.cu
+@@ -111,7 +111,7 @@ torch::Tensor hashmap_build_sparse_conv_out_coords(
+             Pw, Ph, Pd,
+             Dw, Dh, Dd,
+             in_coords.data_ptr<int32_t>(),
+-            hashmap_keys.data_ptr<T>(),
++            hashmap_keys.template data_ptr<T>(),
+             serialize_func
+         );
+ 
+@@ -125,7 +125,7 @@ torch::Tensor hashmap_build_sparse_conv_out_coords(
+         >>>(
+             valid_key.size(0),
+             Wo, Ho, Do,
+-            valid_key.data_ptr<T>(),
++            valid_key.template data_ptr<T>(),
+             out_coords.data_ptr<int32_t>(),
+             serialize_func
+         );
+@@ -324,7 +324,7 @@ torch::Tensor expand_unique_build_sparse_conv_out_coords(
+             Dw, Dh, Dd,
+             in_coords.data_ptr<int32_t>(),
+             expanded_start.data_ptr<int64_t>(),
+-            expanded_keys.data_ptr<T>(),
++            expanded_keys.template data_ptr<T>(),
+             serialize_func
+         );
+ 
+@@ -338,7 +338,7 @@ torch::Tensor expand_unique_build_sparse_conv_out_coords(
+         >>>(
+             valid_keys.size(0),
+             Wo, Ho, Do,
+-            valid_keys.data_ptr<T>(),
++            valid_keys.template data_ptr<T>(),
+             out_coords.data_ptr<int32_t>(),
+             serialize_func
+         );

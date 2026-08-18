@@ -1,0 +1,34 @@
+# Model weights and caches -- these run to many GB
+hf_cache/
+*.safetensors
+*.ckpt
+*.pth
+*.bin
+
+# Generated assets
+outputs/
+queue_inputs/
+*.glb
+*.fbx
+*.obj
+*.mtl
+*.mp4
+*.ply
+*.stl
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Logs
+*.log
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/

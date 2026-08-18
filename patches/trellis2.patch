@@ -1,0 +1,217 @@
+diff --git a/o-voxel/src/convert/flexible_dual_grid.cpp b/o-voxel/src/convert/flexible_dual_grid.cpp
+index ad89edc..28aee16 100644
+--- a/o-voxel/src/convert/flexible_dual_grid.cpp
++++ b/o-voxel/src/convert/flexible_dual_grid.cpp
+@@ -304,7 +304,7 @@ void boundry_qef(
+         // Calculate the QEF for the edge (boundary) defined by v0 and v1
+         Eigen::Vector3d dir(v1.x() - v0.x(), v1.y() - v0.y(), v1.z() - v0.z());
+         double segment_length = dir.norm();
+-        if (segment_length < 1e-6d) continue; // Skip degenerate edges (zero-length)
++        if (segment_length < 1e-6) continue; // Skip degenerate edges (zero-length)
+         dir.normalize();  // unit direction vector
+ 
+         // Projection matrix orthogonal to the direction: I - d d^T
+@@ -334,7 +334,7 @@ void boundry_qef(
+ 
+         Eigen::Vector3d tMax, tDelta;
+         for (int axis = 0; axis < 3; ++axis) {
+-            if (dir[axis] == 0.0d) {
++            if (dir[axis] == 0.0) {
+                 tMax[axis] = std::numeric_limits<double>::infinity();
+                 tDelta[axis] = std::numeric_limits<double>::infinity();
+             } else {
+diff --git a/o-voxel/src/io/filter_neighbor.cpp b/o-voxel/src/io/filter_neighbor.cpp
+index 3af406e..1861791 100644
+--- a/o-voxel/src/io/filter_neighbor.cpp
++++ b/o-voxel/src/io/filter_neighbor.cpp
+@@ -77,7 +77,7 @@ torch::Tensor encode_sparse_voxel_octree_attr_neighbor_cpu(
+     }
+ 
+     // Pack the deltas into a uint8 tensor
+-    torch::Tensor delta = torch::zeros({N, C}, torch::dtype(torch::kUInt8));
++    torch::Tensor delta = torch::zeros({(int64_t)N, (int64_t)C}, torch::dtype(torch::kUInt8));
+     uint8_t* delta_data = delta.data_ptr<uint8_t>();
+     for (int i = 0; i < N; i++) {
+         int x = coord_data[i * 3 + 0];
+@@ -163,7 +163,7 @@ torch::Tensor decode_sparse_voxel_octree_attr_neighbor_cpu(
+     }
+ 
+     // Pack the attribute into a uint8 tensor
+-    torch::Tensor attr = torch::zeros({N, C}, torch::dtype(torch::kUInt8));
++    torch::Tensor attr = torch::zeros({(int64_t)N, (int64_t)C}, torch::dtype(torch::kUInt8));
+     uint8_t* attr_data = attr.data_ptr<uint8_t>();
+     for (int i = 0; i < N; i++) {
+         int x = coord_data[i * 3 + 0];
+diff --git a/o-voxel/src/io/filter_parent.cpp b/o-voxel/src/io/filter_parent.cpp
+index 0beadaf..ecbaacf 100644
+--- a/o-voxel/src/io/filter_parent.cpp
++++ b/o-voxel/src/io/filter_parent.cpp
+@@ -80,7 +80,7 @@ torch::Tensor encode_sparse_voxel_octree_attr_parent_cpu(
+     uint8_t* octree_data = octree.data_ptr<uint8_t>();
+     uint8_t* attr_data = attr.data_ptr<uint8_t>();
+ 
+-    torch::Tensor delta = torch::zeros({N_leaf, C}, torch::kUInt8);
++    torch::Tensor delta = torch::zeros({(int64_t)N_leaf, (int64_t)C}, torch::kUInt8);
+     uint32_t svo_ptr = 0;
+     uint32_t attr_ptr = 0;
+     uint32_t delta_ptr = C;
+@@ -151,7 +151,7 @@ torch::Tensor decode_sparse_voxel_octree_attr_parent_cpu(
+     uint8_t* octree_data = octree.data_ptr<uint8_t>();
+     uint8_t* delta_data = delta.data_ptr<uint8_t>();
+ 
+-    torch::Tensor attr = torch::zeros({N_leaf, C}, torch::kUInt8);
++    torch::Tensor attr = torch::zeros({(int64_t)N_leaf, (int64_t)C}, torch::kUInt8);
+     uint32_t svo_ptr = 0;
+     uint32_t attr_ptr = 0;
+     uint32_t delta_ptr = C;
+diff --git a/o-voxel/src/io/svo.cpp b/o-voxel/src/io/svo.cpp
+index 6775284..074a26b 100644
+--- a/o-voxel/src/io/svo.cpp
++++ b/o-voxel/src/io/svo.cpp
+@@ -71,7 +71,7 @@ torch::Tensor encode_sparse_voxel_octree_cpu(
+     }
+ 
+     // Convert SVO to tensor
+-    torch::Tensor svo_tensor = torch::from_blob(svo.data(), {svo.size()}, torch::kUInt8).clone();
++    torch::Tensor svo_tensor = torch::from_blob(svo.data(), {(int64_t)svo.size()}, torch::kUInt8).clone();
+     return svo_tensor;
+ }
+ 
+@@ -133,6 +133,6 @@ torch::Tensor decode_sparse_voxel_octree_cpu(
+     // Decode SVO into list of codes
+     decode_sparse_voxel_octree_cpu_recursive(octree_data, depth, ptr, stack, codes);
+     // Convert codes to tensor
+-    torch::Tensor codes_tensor = torch::from_blob(codes.data(), {codes.size()}, torch::kInt32).clone();
++    torch::Tensor codes_tensor = torch::from_blob(codes.data(), {(int64_t)codes.size()}, torch::kInt32).clone();
+     return codes_tensor;
+ }
+diff --git a/trellis2/modules/image_feature_extractor.py b/trellis2/modules/image_feature_extractor.py
+index c3cb515..6bca2e4 100644
+--- a/trellis2/modules/image_feature_extractor.py
++++ b/trellis2/modules/image_feature_extractor.py
+@@ -83,7 +83,13 @@ class DinoV3FeatureExtractor:
+         hidden_states = self.model.embeddings(image, bool_masked_pos=None)
+         position_embeddings = self.model.rope_embeddings(image)
+ 
+-        for i, layer_module in enumerate(self.model.layer):
++        # The transformer layer stack moved between transformers versions: older releases expose it
++        # directly as `model.layer`, newer ones nest the encoder as `model.model.layer`.
++        layers = getattr(self.model, 'layer', None)
++        if layers is None:
++            layers = self.model.model.layer
++
++        for i, layer_module in enumerate(layers):
+             hidden_states = layer_module(
+                 hidden_states,
+                 position_embeddings=position_embeddings,
+diff --git a/trellis2/modules/sparse/attention/full_attn.py b/trellis2/modules/sparse/attention/full_attn.py
+index 4eb74d2..f49faab 100644
+--- a/trellis2/modules/sparse/attention/full_attn.py
++++ b/trellis2/modules/sparse/attention/full_attn.py
+@@ -211,6 +211,13 @@ def sparse_scaled_dot_product_attention(*args, **kwargs):
+             max_q_seqlen = max(q_seqlen)
+             max_kv_seqlen = max(kv_seqlen)
+         out = flash_attn_3.flash_attn_varlen_func(q, k, v, cu_seqlens_q, cu_seqlens_kv, max_q_seqlen, max_kv_seqlen)
++    elif config.ATTN == 'sdpa':
++        from .sdpa_varlen import varlen_sdpa
++        if num_all_args == 1:
++            q, k, v = qkv.unbind(dim=1)     # [T, H, C] each
++        elif num_all_args == 2:
++            k, v = kv.unbind(dim=1)         # [T_KV, H, C] each
++        out = varlen_sdpa(q, k, v, q_seqlen, kv_seqlen)     # [T_Q, H, C]
+     else:
+         raise ValueError(f"Unknown attention module: {config.ATTN}")
+     
+diff --git a/trellis2/modules/sparse/attention/windowed_attn.py b/trellis2/modules/sparse/attention/windowed_attn.py
+index 0430788..bb8f881 100644
+--- a/trellis2/modules/sparse/attention/windowed_attn.py
++++ b/trellis2/modules/sparse/attention/windowed_attn.py
+@@ -49,6 +49,7 @@ def calc_window_partition(
+     mask = seq_lens != 0
+     seq_lens = seq_lens[mask]
+     
++    attn_func_args = {}
+     if config.ATTN == 'xformers':
+         if 'xops' not in globals():
+             import xformers.ops as xops
+@@ -113,6 +114,12 @@ def sparse_windowed_scaled_dot_product_self_attention(
+         if 'flash_attn' not in globals():
+             import flash_attn
+         out = flash_attn.flash_attn_varlen_qkvpacked_func(qkv_feats, **attn_func_args)  # [M, H, C]
++    elif config.ATTN == 'sdpa':
++        from .sdpa_varlen import varlen_sdpa
++        q, k, v = qkv_feats.unbind(dim=1)                                               # [M, H, C]
++        out = varlen_sdpa(q, k, v, seq_lens, seq_lens)                                  # [M, H, C]
++    else:
++        raise ValueError(f"Unknown attention module: {config.ATTN}")
+ 
+     out = out[bwd_indices]      # [T, H, C]
+ 
+@@ -184,6 +191,12 @@ def sparse_windowed_scaled_dot_product_cross_attention(
+             cu_seqlens_q=q_attn_func_args['cu_seqlens'], cu_seqlens_k=kv_attn_func_args['cu_seqlens'],
+             max_seqlen_q=q_attn_func_args['max_seqlen'], max_seqlen_k=kv_attn_func_args['max_seqlen'],
+         )  # [M, H, C]
++    elif config.ATTN == 'sdpa':
++        from .sdpa_varlen import varlen_sdpa
++        k, v = kv_feats.unbind(dim=1)                                                   # [M, H, C]
++        out = varlen_sdpa(q_feats, k, v, q_seq_lens, kv_seq_lens)                       # [M, H, C]
++    else:
++        raise ValueError(f"Unknown attention module: {config.ATTN}")
+ 
+     out = out[q_bwd_indices]      # [T, H, C]
+ 
+diff --git a/trellis2/modules/sparse/config.py b/trellis2/modules/sparse/config.py
+index a5f4d53..6b1dde4 100644
+--- a/trellis2/modules/sparse/config.py
++++ b/trellis2/modules/sparse/config.py
+@@ -21,7 +21,7 @@ def __from_env():
+         CONV = env_sparse_conv_backend
+     if env_sparse_debug is not None:
+         DEBUG = env_sparse_debug == '1'
+-    if env_sparse_attn_backend is not None and env_sparse_attn_backend in ['xformers', 'flash_attn', 'flash_attn_3']:
++    if env_sparse_attn_backend is not None and env_sparse_attn_backend in ['xformers', 'flash_attn', 'flash_attn_3', 'sdpa']:
+         ATTN = env_sparse_attn_backend
+         
+     print(f"[SPARSE] Conv backend: {CONV}; Attention backend: {ATTN}")
+@@ -38,6 +38,6 @@ def set_debug(debug: bool):
+     global DEBUG
+     DEBUG = debug
+ 
+-def set_attn_backend(backend: Literal['xformers', 'flash_attn']):
++def set_attn_backend(backend: Literal['xformers', 'flash_attn', 'flash_attn_3', 'sdpa']):
+     global ATTN
+     ATTN = backend
+diff --git a/trellis2/pipelines/trellis2_image_to_3d.py b/trellis2/pipelines/trellis2_image_to_3d.py
+index a7b84b9..6fcae35 100644
+--- a/trellis2/pipelines/trellis2_image_to_3d.py
++++ b/trellis2/pipelines/trellis2_image_to_3d.py
+@@ -102,7 +102,15 @@ class Trellis2ImageTo3DPipeline(Pipeline):
+         pipeline.tex_slat_normalization = args['tex_slat_normalization']
+ 
+         pipeline.image_cond_model = getattr(image_feature_extractor, args['image_cond_model']['name'])(**args['image_cond_model']['args'])
+-        pipeline.rembg_model = getattr(rembg, args['rembg_model']['name'])(**args['rembg_model']['args'])
++        # The background remover is only used for inputs without an alpha channel, but it lives in a
++        # gated HF repo. Don't let an inaccessible remover block the whole pipeline -- degrade to
++        # RGBA-only input instead, and report the reason clearly if an RGB image is later passed in.
++        try:
++            pipeline.rembg_model = getattr(rembg, args['rembg_model']['name'])(**args['rembg_model']['args'])
++        except Exception as e:
++            print(f"[REMBG] Background-removal model unavailable ({type(e).__name__}). "
++                  f"Inputs with an alpha channel will still work; RGB inputs will not.")
++            pipeline.rembg_model = None
+         
+         pipeline.low_vram = args.get('low_vram', True)
+         pipeline.default_pipeline_type = args.get('default_pipeline_type', '1024_cascade')
+@@ -141,6 +149,12 @@ class Trellis2ImageTo3DPipeline(Pipeline):
+         if has_alpha:
+             output = input
+         else:
++            if self.rembg_model is None:
++                raise RuntimeError(
++                    "This image has no alpha channel and needs background removal, but the rembg model "
++                    "could not be loaded (it is a gated Hugging Face repo). Either request access to it, "
++                    "or supply an RGBA image whose background is already transparent."
++                )
+             input = input.convert('RGB')
+             if self.low_vram:
+                 self.rembg_model.to(self.device)
