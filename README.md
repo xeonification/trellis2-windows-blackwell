@@ -1,3 +1,8 @@
+
+
+https://github.com/user-attachments/assets/a3711f70-289c-4b5b-bf20-a85622f6515f
+
+
 # TRELLIS.2 on Windows + Blackwell (RTX 50-series)
 
 Patches, launchers, and a batch web UI for running [microsoft/TRELLIS.2](https://github.com/microsoft/TRELLIS.2)
